@@ -2,18 +2,18 @@ from flask import (
     Flask, request, jsonify,
     render_template, redirect, session
 )
-from dao import delete_order
-from dao import get_rider_orders
 
 
-from dao import (
+from app.dao import (
     create_order,
     get_all_orders,
     get_order_items,
     update_order_status,
     get_all_riders,
     assign_rider,
-    get_all_products
+    get_all_products,
+    delete_order,
+    get_rider_orders
 )
 
 
@@ -182,8 +182,8 @@ def api_admin_orders():
     return jsonify(orders)
 
 # ---------------------------
-# START SERVER (LAST LINE)
+# START SERVER
 # ---------------------------
 if __name__ == "__main__":
-    print(app.url_map)
-    app.run(debug=True)
+    app.run()
+
