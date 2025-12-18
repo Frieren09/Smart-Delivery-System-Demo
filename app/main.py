@@ -3,7 +3,6 @@ from flask import (
     render_template, redirect, session
 )
 
-
 from app.dao import (
     create_order,
     get_all_orders,
@@ -16,7 +15,6 @@ from app.dao import (
     get_rider_orders
 )
 
-
 # ---------------------------
 # APP SETUP
 # ---------------------------
@@ -28,7 +26,6 @@ ADMIN_PASSWORD = "admin123"
 
 print("🔥 SMART DELIVERY API STARTED 🔥")
 
-
 # ---------------------------
 # HOME
 # ---------------------------
@@ -36,15 +33,13 @@ print("🔥 SMART DELIVERY API STARTED 🔥")
 def home():
     return "<h1>Welcome to SmartDelivery API</h1><p>Visit /order or /admin</p>"
 
-
 # ---------------------------
-# ORDER PAGE (CUSTOMER)
+# CUSTOMER ORDER PAGE
 # ---------------------------
 @app.route("/order", methods=["GET"])
 def order_page():
     products = get_all_products()
     return render_template("order.html", products=products)
-
 
 # ---------------------------
 # CREATE ORDER (API)
@@ -63,14 +58,12 @@ def place_order():
         "status": "Pending"
     }), 201
 
-
 # ---------------------------
-# GET ORDERS (JSON)
+# GET ALL ORDERS (JSON)
 # ---------------------------
 @app.route("/orders", methods=["GET"])
 def get_orders():
     return jsonify(get_all_orders())
-
 
 # ---------------------------
 # ADMIN DASHBOARD
@@ -83,27 +76,43 @@ def admin_dashboard():
     orders = get_all_orders()
     riders = get_all_riders()
 
-    for o in orders:
-        o["items"] = get_order_items(o["order_id"])
+    for order in orders:
+        order["items"] = get_order_items(order["order_id"])
 
-    return render_template("admin.html", orders=orders, riders=riders)
-
-
+    return render_template(
+        "admin.html",
+        orders=orders,
+        riders=riders
+    )
 
 # ---------------------------
-# UPDATE ORDER STATUS (FLOW)
+# ADMIN API (AUTO-REFRESH)
 # ---------------------------
+@app.route("/api/admin/orders")
+def api_admin_orders():
+    orders = get_all_orders()
+
+    for order in orders:
+        order["items"] = get_order_items(order["order_id"])
+
+    return jsonify(orders)
 
 # ---------------------------
 # ASSIGN RIDER
 # ---------------------------
 @app.route("/admin/orders/<int:order_id>/assign", methods=["POST"])
 def assign_order_rider(order_id):
+    if not session.get("admin_logged_in"):
+        return redirect("/login")
+
     rider_id = request.form["rider_id"]
     assign_rider(order_id, rider_id)
+
     return redirect("/admin")
 
-
+# ---------------------------
+# DELETE ORDER
+# ---------------------------
 @app.route("/admin/orders/<int:order_id>/delete", methods=["POST"])
 def delete_order_admin(order_id):
     if not session.get("admin_logged_in"):
@@ -132,7 +141,6 @@ def login():
 
     return render_template("login.html")
 
-
 # ---------------------------
 # LOGOUT
 # ---------------------------
@@ -141,6 +149,9 @@ def logout():
     session.clear()
     return redirect("/login")
 
+# ---------------------------
+# TRACK ORDER (CUSTOMER)
+# ---------------------------
 @app.route("/track", methods=["GET", "POST"])
 def track_order():
     order = None
@@ -150,17 +161,35 @@ def track_order():
         order_id = request.form["order_id"]
 
         orders = get_all_orders()
-        order = next((o for o in orders if str(o["order_id"]) == order_id), None)
+        order = next(
+            (o for o in orders if str(o["order_id"]) == order_id),
+            None
+        )
 
         if order:
             items = get_order_items(order["order_id"])
 
-    return render_template("track.html", order=order, items=items)
+    return render_template(
+        "track.html",
+        order=order,
+        items=items
+    )
+
+# ---------------------------
+# RIDER DASHBOARD
+# ---------------------------
 @app.route("/rider/<int:rider_id>")
 def rider_dashboard(rider_id):
     orders = get_rider_orders(rider_id)
-    return render_template("rider.html", orders=orders, rider_id=rider_id)
+    return render_template(
+        "rider.html",
+        orders=orders,
+        rider_id=rider_id
+    )
 
+# ---------------------------
+# RIDER ACTIONS
+# ---------------------------
 @app.route("/rider/orders/<int:order_id>/start", methods=["POST"])
 def rider_start(order_id):
     update_order_status(order_id, "On Delivery")
@@ -171,19 +200,8 @@ def rider_complete(order_id):
     update_order_status(order_id, "Completed")
     return redirect(request.referrer)
 
-
-@app.route("/api/admin/orders")
-def api_admin_orders():
-    orders = get_all_orders()
-
-    for order in orders:
-        order["items"] = get_order_items(order["order_id"])
-
-    return jsonify(orders)
-
 # ---------------------------
-# START SERVER
+# START SERVER (RENDER SAFE)
 # ---------------------------
 if __name__ == "__main__":
     app.run()
-
