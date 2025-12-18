@@ -1,19 +1,12 @@
 import psycopg2
-
+import os
 
 def get_connection():
-
     return psycopg2.connect(
-
-        host="localhost",
-
-        database="Smart-Delivery",
-
-        user="postgres",
-
-        password="Hojlund1099@"
-
+        os.environ["DATABASE_URL"],
+        sslmode="require"
     )
+
 
 
 def create_order(customer_id, items):
